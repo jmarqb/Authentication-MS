@@ -1,0 +1,50 @@
+name: MS-AUTH Test Report
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  ms-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '21.0.5'
+          java-package: 'jdk'
+      - name: Test Step
+        run: mvn clean verify
+      - name: Test Report
+        uses: dorny/test-reporter@v1.9.1
+        if: success() || failure()
+        with:
+          name: junit Report
+          path: ${{ github.workspace }}/target/test-results/test/TEST-*.xml
+          reporter: java-junit
+      - name: JaCoCo Code Coverage Report
+        id: jacoco_reporter
+        uses: PavanMudigonda/jacoco-reporter@v5.1
+        with:
+            coverage_results_path: ${{ github.workspace }}/target/site/jacoco/jacoco.xml
+            coverage_report_name: Coverage
+            coverage_report_title: JaCoCo
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            skip_check_run: false
+            minimum_coverage: 80
+            fail_below_threshold: false
+            publish_only_summary: false
+      - name: Add Jacoco report to workflow run summary
+        run: |
+          echo "| Outcome | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Coverage % | ${{ steps.jacoco_reporter.outputs.coverage_percentage }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| :heavy_check_mark: Number of Lines Covered | ${{ steps.jacoco_reporter.outputs.covered_lines }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| :x: Number of Lines Missed | ${{ steps.jacoco_reporter.outputs.missed_lines }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Number of Lines | ${{ steps.jacoco_reporter.outputs.total_lines }} |" >> $GITHUB_STEP_SUMMARY
